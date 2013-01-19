@@ -5,17 +5,21 @@ import traceback
 
 from twisted.words.protocols import irc
 from twisted.internet import protocol, reactor
+from twisted.plugin import getPlugins
+from zope.interface import implementedBy
+from zope.interface.verify import verifyObject
 
 from zope.interface.exceptions import DoesNotImplement
 
 import sqlalchemy
 from sqlalchemy import orm
 
-from bravo.plugin import retrieve_named_plugins, verify_plugin, PluginException
+#from bravo.plugin import retrieve_named_plugins, verify_plugin, PluginException
 
 import hamper.config
 import hamper.log
-from hamper.interfaces import IPlugin, IPresencePlugin, IChatPlugin, IPopulationPlugin
+from hamper import plugins
+from hamper.interfaces import BaseInterface, IPresencePlugin, IChatPlugin, IPopulationPlugin
 
 
 log = logging.getLogger('hamper')
@@ -195,8 +199,7 @@ class CommanderFactory(protocol.ClientFactory):
         self.db = DBSession()
 
         # Load all plugins mentioned in the configuration. Allow globbing.
-        plugins = retrieve_named_plugins(IPlugin, config['plugins'], 'hamper.plugins')
-        for plugin in plugins:
+        for plugin in getPlugins(BaseInterface, package=plugins):
             self.registerPlugin(plugin)
 
     def clientConnectionLost(self, connector, reason):
@@ -212,24 +215,25 @@ class CommanderFactory(protocol.ClientFactory):
             'presence': IPresencePlugin,
             'chat': IChatPlugin,
             'population': IPopulationPlugin,
-            'base_plugin': IPlugin,
+            'base_plugin': BaseInterface,
         }
 
         # Everything is, at least, a base plugin.
         valid_types = ['baseplugin']
         # Loop through the types of plugins and check for implentation of each.
+
+        claimed_compliances = list(implementedBy(type(plugin)))
+        # Can we use this as a map instead?
         for t, interface in plugin_types.iteritems():
-            try:
-                verified_plugin = verify_plugin(interface, plugin)
-                # If the above succeeded, then `plugin` implementes `interface`.
-                self.plugins[t].append(verified_plugin)
-                self.plugins[t].sort()
-                valid_types.append(t)
-            except DoesNotImplement:
-                # This means this plugin does not declare to  be a `t`.
-                pass
-            except PluginException:
-                log.error('Plugin %s claims to be a %s, but is not!', plugin.name, t)
+            if interface in claimed_compliances:
+                try:
+                    verifyObject(interface, plugin)
+                    # If the above succeeded, then `plugin` implementes `interface`.
+                    self.plugins[t].append(plugin)
+                    self.plugins[t].sort()
+                    valid_types.append(t)
+                except DoesNotImplement:
+                    log.error('Plugin %s claims to be a %s, but is not!', plugin.name, t)
 
         plugin.setup(self)
 

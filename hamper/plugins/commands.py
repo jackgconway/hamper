@@ -1,14 +1,12 @@
 import logging
 import re
 import random
-
 from zope.interface import implements
 
 from hamper.interfaces import Command, ChatCommandPlugin
 
 
 log = logging.getLogger('hamper.plugins')
-
 
 class Quit(ChatCommandPlugin):
     """Know when hamper isn't wanted."""
@@ -25,6 +23,8 @@ class Quit(ChatCommandPlugin):
             bot.reply(comm, 'Bye!')
             bot.quit()
             return True
+
+quit = Quit()
 
 
 class Sed(ChatCommandPlugin):
@@ -187,5 +187,4 @@ class Dice(ChatCommandPlugin):
 lmgtfy = LetMeGoogleThatForYou()
 rot13 = Rot13()
 sed = Sed()
-quit = Quit()
 dice = Dice()
