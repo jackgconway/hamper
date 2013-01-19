@@ -1,5 +1,6 @@
 import re
-import urllib, urllib2
+import urllib
+import urllib2
 import json
 
 from hamper.interfaces import ChatPlugin
@@ -36,18 +37,20 @@ class Bitly(ChatPlugin):
     """
 
     def setup(self, factory):
-        self.regex = re.compile(self.regex, re.VERBOSE|re.IGNORECASE|re.U)
+        self.regex = re.compile(self.regex, re.VERBOSE | re.IGNORECASE | re.U)
         self.api_url = 'https://api-ssl.bitly.com/v3/shorten'
-        # If an exclude value is found in the url, than it will not be shortened
+        self.username = factory.config['bitly']['login']
+        self.api_key = factory.config['bitly']['api_key']
+        # If an exclude value is found in the url
+        # it will not be shortened
         self.excludes = ['imgur.com', 'gist.github.com', 'pastebin.com']
-
         # Make sure they've configured the bitly config values.
         try:
             self.username = factory.config['bitly']['login']
             self.api_key = factory.config['bitly']['api_key']
         except KeyError:
-            print ('\nTo use the bitly plugin you need to set your bitly login\n'
-                   'and api_key in your config file.\n'
+            print ('\nTo use the bitly plugin you need to set your bitly login'
+                   '\nand api_key in your config file.\n'
                    'Example:\n'
                    'bitly:\n'
                    "    login: '123456789000'\n"
@@ -76,14 +79,16 @@ class Bitly(ChatPlugin):
                 long_url = 'http://' + long_url
 
             # Bitly requires valid % encoded urls
-            params = urllib.urlencode({'login': self.username, 'apiKey': self.api_key, 'longUrl': long_url})
+            params = urllib.urlencode({'login': self.username,
+                                       'apiKey': self.api_key,
+                                       'longUrl': long_url})
             req = urllib2.Request(self.api_url, data=params)
             response = urllib2.urlopen(req)
             data = json.load(response)
 
             if data['status_txt'] == 'OK':
                 bot.reply(comm, "{0[user]}'s shortened url is {1[url]}"
-                    .format(comm, data['data']))
+                          .format(comm, data['data']))
 
         # Always let the other plugins run
         return False
