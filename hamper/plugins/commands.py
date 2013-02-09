@@ -34,22 +34,22 @@ class Sed(ChatCommandPlugin):
 
     class SedCommand(Command):
         name = 'sed'
-        regex = r's/(.*)/(.*)/(g?i?m?)'
+        regex = r's/(.*)/(.*)/(.*)'
         onlyDirected = False
 
         short_desc = 's/find/replace/ - Perform sed style find and replace.'
-        long_desc = ('Use like "!s/foo/bar/" to search for "foo" and replace it '
+        long_desc = ('Use like "s/foo/bar/" to search for "foo" and replace it '
                      'with "bar". \n'
-                     'Flags: Add these flags to the end of the command: \n'
+                     'Flags: Add these flags to the end of the command:\n'
                      'm - Restrict the search to only your messages\n'
-                     'i - Case insensitive searching.')
+                     'i - Case insensitive searching.\n'
+                     'g - Match an unlimited number of times.')
 
         def command(self, bot, comm, groups):
+            usr_replace = groups[1]
             options = groups[2]
-
             regex_opts = re.I if 'i' in options else 0
             usr_regex = re.compile(groups[0], regex_opts)
-            usr_replace = groups[1]
 
             g = 0 if 'g' in options else 1
 
@@ -64,7 +64,7 @@ class Sed(ChatCommandPlugin):
                     continue
 
                 # Don't look at other sed commands
-                if hist['directed'] and hist['raw_message'].startswith('s/'):
+                if 's/' in hist['raw_message']:
                     continue
 
                 if usr_regex.search(hist['raw_message']):
@@ -73,7 +73,7 @@ class Sed(ChatCommandPlugin):
                                 .format(hist['user'], new_msg))
                     break
             else:
-                bot.reply(comm, "Sorry, I couldn't match /{0}/."
+                bot.reply(comm, "Sorry, I couldn't match '{0}'."
                         .format(usr_regex.pattern))
 
 
@@ -98,6 +98,28 @@ class LetMeGoogleThatForYou(ChatCommandPlugin):
             args = groups[0].replace(' ', '+')
             bot.reply(comm, target + 'http://lmgtfy.com/?q=' + args)
 
+class Rot13(ChatCommandPlugin):
+    """Encode secret messages."""
+    name = 'rot13'
+
+    class Rot13Command(Command):
+        name = 'rot13'
+        regex = '^rot13\s+(.*)'
+        onlyDirected = False
+
+        short_desc = 'rot13 - Encodes string using rot13 cipher.'
+        long_desc = ('The rot13 cipher rotates every letter to the '
+                     'other side of the alphabet. Applying it twice '
+                     'returns the original string.\n'
+                     'Example: !rot13 science yields fpvrapr'
+                     ' and !rot13 fpvrapr yields science')
+
+        def command(self, bot, comm, groups):
+            target = ''
+            if comm['target']:
+                target = comm['target'] + ': '
+            args = groups[0].encode('rot13')
+            bot.reply(comm, target + args)
 
 class Dice(ChatCommandPlugin):
     """Random dice rolls!"""
@@ -163,6 +185,7 @@ class Dice(ChatCommandPlugin):
 
 
 lmgtfy = LetMeGoogleThatForYou()
+rot13 = Rot13()
 sed = Sed()
 quit = Quit()
 dice = Dice()

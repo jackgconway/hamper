@@ -47,7 +47,7 @@ Make a file named `hamper.conf`. This should be a YAML file containing these
 fields:
 
 -   `nickname`
--   `channel`
+-   `channels`
 -   `server`
 -   `port`
 -   `db` - A database URL as described [here][dburl]
@@ -85,5 +85,8 @@ Bot creator:
 -   Mike Cooper <mythmon@gmail.com>
 
 Contributor:
+=======
+
+-   Spencer Krum <krum.spenecr@gmail.com>
 
 -   Chance Zibolski <chance.zibolski@gmail.com>
