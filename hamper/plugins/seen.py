@@ -118,7 +118,7 @@ class Seen(ChatCommandPlugin, PopulationPlugin, PresencePlugin):
         onlyDirected = False
 
         name = 'names'
-        short_desc = 'Get the list of users in channel.'
+        short_desc = 'names - Get the list of users in channel.'
         long_desc = None
 
         def command(self, bot, comm, groups):
