@@ -31,15 +31,12 @@ Dependencies
 -   Twisted
 -   SQLAlchemy
 -   PyYaml
--   The plugin loader of [Bravo][bravo] (included)
--   Exocet (included)
 
 To install the current set of required dependencies:
 
     cd hamper/
     pip install -r requirements.txt
 
-[bravo]: https://github.com/MostAwesomeDude/bravo
 
 Configuration
 =============
