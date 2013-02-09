@@ -104,9 +104,9 @@ class Seen(ChatCommandPlugin, PopulationPlugin, PresencePlugin):
                 bot.reply(comm, 'I have not seen {0}'.format(name))
             # user exists database and has been seen
             elif user.seen:
-                time_format = 'at %I:%M %p on %b-%d'
-                seen = user.seen.strftime(time_format)
-                bot.reply(comm, 'Seen {0.nickname} {1}'.format(user, seen))
+                seen = get_time(user.seen)
+                bot.reply(comm, '{nick} last seen {seen} ago'
+                                .format(nick=user, seen=seen))
             # if the user exists in the database, but has not been seen active
             # since the bot joined
             else:
@@ -135,6 +135,42 @@ class Seen(ChatCommandPlugin, PopulationPlugin, PresencePlugin):
                 # Trigger a names request as a fall back.
                 Seen.names()
                 bot.reply(comm, 'No users in list. Needs work.')
+
+
+def get_time(time):
+
+    def pluralize(n, s):
+        """Takes an n and and s, and returns the correct plural form of s
+        when n is larger than 1"""
+
+        if n == 1:
+            return "1 %s" % s
+        elif n > 1:
+            return "%d %ss" % (n, s)
+
+    def q_and_r(x, y):
+        return x / y, x % y
+
+    class PrettyTime:
+        def __init__(self, time):
+            now = datetime.now()
+            delta = now - time
+            self.day = delta.days
+            self.second = delta.seconds
+
+            self.year, self.day = q_and_r(self.day, 365)
+            self.month, self.day = q_and_r(self.day, 30)
+            self.hour, self.second = q_and_r(self.second, 3600)
+            self.minute, self.second = q_and_r(self.second, 60)
+
+        def format(self):
+            for period in ['year', 'month', 'day', 'hour', 'minute', 'second']:
+                n = getattr(self, period)
+                if n > 0:
+                    return pluralize(n, period)
+            return "0 seconds"
+
+    return PrettyTime(time).format()
 
 
 class User(object):
