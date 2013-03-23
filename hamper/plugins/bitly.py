@@ -64,8 +64,9 @@ class Bitly(ChatPlugin):
             # couldn't figure it out.
             long_url = match.group(0)
 
-            # Only shorten urls which are longer than a bitly url (12 chars)
-            if len(long_url) <= 12:
+            # Only shorten urls which are longer than a bitly url
+            # (20 chars, including the http:// prefix)
+            if len(long_url) <= 20:
                 return False
 
             # Don't shorten url's which are in the exclude list
@@ -84,12 +85,13 @@ class Bitly(ChatPlugin):
             # with the short URL get the title of the page
             info = self.info(bot, short_url=short_url)
             title = info['data']['info'][0]['title']
+
+            template = "{nick}'s url: {url}"
             if title:
-                bot.reply(comm, "{url} - Title: {title}"
-                          .format(url=short_url, title=title))
-            else:
-                bot.reply(comm, "{nick}'s url: {url}"
-                          .format(nick=comm['user'], url=short_url))
+                template += " - Title: {title}"
+
+            bot.reply(comm, template).format(
+                nick=comm['user'], url=short_url, title=title)
 
         # Always let the other plugins run
         return False
