@@ -5,14 +5,72 @@ import json
 
 from hamper.interfaces import ChatPlugin
 
+class BitlyAPI(object):
+    """
+    This class does the actual work of communicating with bit.ly
+    """
+    def __init__(self, username, api_url, api_key):
+        self.username = username
+        self.api_url = api_url
+        self.api_key = api_key
+
+    def _query(self, method, path, **kwargs):
+        """
+        Send an HTTP Request to the bit.ly API
+        """
+        params = {'login': self.username, 'apiKey': self.api_key }
+        url = self.api_url + path
+
+        if 'get' == method:
+            params.update(kwargs)
+            url += '?' + urllib.urlencode(params)
+            data = None
+        elif 'post' == method:
+            data = kwargs
+        else:
+            raise ValueError('Invalid Method')
+
+        req = urllib2.Request(url, data=data)
+        response = urllib2.urlopen(req)
+        self.result = json.load(response)
+
+    def shorten(self, long_url):
+        """Given a long URL, returns a bitly short URL"""
+        result = self._query('post', 'shorten', longUrl=long_url)
+        return result['data']['url']
+
+    def info(self, hash=None, short_url=None):
+        """
+        Given a hash or short_url, return all information bitly provides
+        """
+        params = {}
+        if not (hash or short_url):
+            raise ValueError('either a hash or short_url is required')
+        if hash:
+            params = {'hash': hash}
+        if short_url:
+            params = {'shortUrl': short_url}
+        json_data = self._query('get', 'info', **params)
+        return json_data
+
+    def get_title(self, short_url):
+        """
+        Given a shortened url, return the title.
+        """
+        return self.info(short_url=short_url)['data']['info'][0]['title']
+
+
 
 class Bitly(ChatPlugin):
+    """
+    Plugin to add URL-Shortening via http://bit.ly/
+    """
     name = 'bitly'
     priority = 2
 
     # Regex is taken from:
     # http://daringfireball.net/2010/07/improved_regex_for_matching_urls
-    regex = ur"""
+    regex = re.compile(ur"""
     (                       # Capture 1: entire matched URL
       (?:
         (?P<prot>https?://)     # http or https protocol
@@ -34,19 +92,14 @@ class Bitly(ChatPlugin):
                                            # these punct chars
       )
     )
-    """
+    """, re.VERBOSE | re.IGNORECASE | re.U)
 
     def setup(self, factory):
-        self.regex = re.compile(self.regex, re.VERBOSE | re.IGNORECASE | re.U)
-        self.api_url = 'https://api-ssl.bitly.com/v3/'
-        self.username = factory.config['bitly']['login']
-        self.api_key = factory.config['bitly']['api_key']
-        # If an exclude value is found in the url it will not be shortened
-        self.excludes = ['imgur.com', 'github.com', 'pastebin.com']
-        # Make sure they've configured the bitly config values.
         try:
-            self.username = factory.config['bitly']['login']
-            self.api_key = factory.config['bitly']['api_key']
+            self.api = BitlyAPI(
+                username=factory.config['bitly']['login'],
+                api_url='https://api-ssl.bitly.com/v3/',
+                api_key=factory.config['bitly']['api_key'])
         except KeyError:
             print ('\nTo use the bitly plugin you need to set your bitly login'
                    '\nand api_key in your config file.\n'
@@ -55,6 +108,10 @@ class Bitly(ChatPlugin):
                    "    login: '123456789000'\n"
                    "    api_key: '1234678901234567890123467890123456'\n")
             quit()
+
+        # If an exclude value is found in the url it will not be shortened
+        self.excludes = ['imgur.com', 'github.com', 'pastebin.com']
+
 
     def message(self, bot, comm):
         match = self.regex.search(comm['message'])
@@ -78,53 +135,18 @@ class Bitly(ChatPlugin):
             if not match.group('prot'):
                 long_url = 'http://' + long_url
 
-            # Get the short URL
-            shorten_data = self.shorten(bot, long_url)
-            short_url = shorten_data['data']['url']
-
-            # with the short URL get the title of the page
-            info = self.info(bot, short_url=short_url)
-            title = info['data']['info'][0]['title']
+            short_url = self.api.shorten(long_url)
+            title = self.api.get_title(short_url)
 
             template = "{nick}'s url: {url}"
             if title:
                 template += " - Title: {title}"
 
-            bot.reply(comm, template).format(
+            msg = template.format(
                 nick=comm['user'], url=short_url, title=title)
+            bot.reply(comm, msg)
 
         # Always let the other plugins run
         return False
-
-    def shorten(self, bot, long_url):
-        """Given a long URL, returns a bitly short URL"""
-        params = {'login': self.username, 'apiKey': self.api_key,
-                  'longUrl': long_url}
-
-        url = self.api_url + 'shorten'
-        data = urllib.urlencode(params)
-
-        req = urllib2.Request(url, data=data)
-        response = urllib2.urlopen(req)
-        json_data = json.load(response)
-
-        return json_data
-
-    def info(self, bot, hash=None, short_url=None):
-        params = {'login': self.username, 'apiKey': self.api_key}
-        if hash:
-            params.update({'hash': hash})
-        if short_url:
-            params.update({'shortUrl': short_url})
-
-        url = self.api_url + 'info'
-        data = urllib.urlencode(params)
-        url += '?' + data
-
-        req = urllib2.Request(url)
-        response = urllib2.urlopen(req)
-        json_data = json.load(response)
-
-        return json_data
 
 bitly = Bitly()
