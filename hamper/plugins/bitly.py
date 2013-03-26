@@ -16,42 +16,37 @@ class BitlyAPI(object):
 
     def _query(self, method, path, **kwargs):
         """
-        Send an HTTP Request to the bit.ly API
+        Send an HTTP Request to the bitly API
         """
         params = {'login': self.username, 'apiKey': self.api_key }
+        params.update(kwargs)
         url = self.api_url + path
 
         if 'get' == method:
-            params.update(kwargs)
             url += '?' + urllib.urlencode(params)
             data = None
         elif 'post' == method:
-            data = kwargs
+            data = urllib.urlencode(params)
         else:
             raise ValueError('Invalid Method')
 
         req = urllib2.Request(url, data=data)
         response = urllib2.urlopen(req)
-        self.result = json.load(response)
+        return json.load(response)
 
     def shorten(self, long_url):
-        """Given a long URL, returns a bitly short URL"""
+        """
+        Given a long URL, returns a bitly short URL
+        """
         result = self._query('post', 'shorten', longUrl=long_url)
         return result['data']['url']
 
-    def info(self, hash=None, short_url=None):
+    def info(self, short_url):
         """
-        Given a hash or short_url, return all information bitly provides
+        Given a short_url, return all information bitly provides
         """
-        params = {}
-        if not (hash or short_url):
-            raise ValueError('either a hash or short_url is required')
-        if hash:
-            params = {'hash': hash}
-        if short_url:
-            params = {'shortUrl': short_url}
-        json_data = self._query('get', 'info', **params)
-        return json_data
+        params = {'shortUrl': short_url}
+        return self._query('get', 'info', **params)
 
     def get_title(self, short_url):
         """
