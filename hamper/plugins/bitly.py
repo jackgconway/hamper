@@ -24,35 +24,53 @@ class BitlyAPI(object):
 
         if 'get' == method:
             url += '?' + urllib.urlencode(params)
-            data = None
+            req = urllib2.Request(url)
         elif 'post' == method:
-            data = urllib.urlencode(params)
+            req = urllib2.Request(url, data=urllib.urlencode(params))
         else:
             raise ValueError('Invalid Method')
 
-        req = urllib2.Request(url, data=data)
-        response = urllib2.urlopen(req)
-        return json.load(response)
+        json_string = urllib2.urlopen(req)
+        self.response = json.load(json_string)
+
+        return self._isok()
+
+    def _isok(self):
+        """
+        guards against http error
+        """
+        return self.response['status_code'] == 200
+
+    def status(self):
+        """
+        Return the status of the last request as a string,
+        converted to ascii because twisted complains about unicode
+        (even though it's perfectly valid for IRC)
+        """
+        return ' '.join([
+            str(self.response.get('status_code', '<no status_code>')),
+            self.response.get('status_txt', '<no status_txt>')]
+        ).encode('ascii','replace')
 
     def shorten(self, long_url):
         """
         Given a long URL, returns a bitly short URL
         """
-        result = self._query('post', 'shorten', longUrl=long_url)
-        return result['data']['url']
+        if self._query('post', 'shorten', longUrl=long_url):
+            return self.response['data']['url']
 
     def info(self, short_url):
         """
         Given a short_url, return all information bitly provides
         """
-        params = {'shortUrl': short_url}
-        return self._query('get', 'info', **params)
+        return self._query('get', 'info', shortUrl=short_url)
 
     def get_title(self, short_url):
         """
         Given a shortened url, return the title.
         """
-        return self.info(short_url=short_url)['data']['info'][0]['title']
+        if self.info(short_url=short_url):
+            return self.response['data']['info'][0]['title']
 
 
 
@@ -131,15 +149,17 @@ class Bitly(ChatPlugin):
                 long_url = 'http://' + long_url
 
             short_url = self.api.shorten(long_url)
-            title = self.api.get_title(short_url)
+            title = self.api.get_title(short_url) if short_url else None
 
-            template = "{nick}'s url: {url}"
-            if title:
-                template += " - Title: {title}"
-
-            msg = template.format(
-                nick=comm['user'], url=short_url, title=title)
-            bot.reply(comm, msg)
+            if short_url:
+                template = "{nick}'s url: {url}"
+                if title:
+                    template += " - Title: {title}"
+                msg = template.format(
+                    nick=comm['user'], url=short_url, title=title)
+                bot.reply(comm, msg)
+            else:
+                bot.reply(comm, self.api.status())
 
         # Always let the other plugins run
         return False
