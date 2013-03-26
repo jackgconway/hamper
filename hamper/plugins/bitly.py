@@ -119,11 +119,20 @@ class Bitly(ChatPlugin):
                    'Example:\n'
                    'bitly:\n'
                    "    login: '123456789000'\n"
-                   "    api_key: '1234678901234567890123467890123456'\n")
+                   "    api_key: '1234678901234567890123467890123456'\n"
+                   "\n"
+                   "NOTE: You will need to create a bitly account, but the\n'"
+                   "username to use here should be a separate login which\n"
+                   "bitly generates at https://bitly.com/a/your_api_key")
             quit()
 
         # If an exclude value is found in the url it will not be shortened
-        self.excludes = ['imgur.com', 'github.com', 'pastebin.com']
+        # these links are already shortened by bitly:
+        self.excludes = ['bit.ly', 'tnw.co']
+
+        # You can add your own here.
+        # TODO: move custom bitly excludes to hamper.conf
+        self.excludes.extend(['imgur.com', 'github.com', 'pastebin.com'])
 
 
     def message(self, bot, comm):
