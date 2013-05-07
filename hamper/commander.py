@@ -119,8 +119,6 @@ class CommanderProtocol(irc.IRCClient):
     def connectionLost(self, reason):
         """Called when the connection is lost to the server."""
         self.factory.db.commit()
-        if reactor.running:
-            reactor.stop()
 
     def userJoined(self, user, channel):
         """Called when I see another user joining a channel."""
