@@ -82,7 +82,7 @@ class Seen(ChatCommandPlugin, PopulationPlugin, PresencePlugin):
     class SeenCommand(Command):
         """Say when you last saw a nickname"""
         regex = r'^seen (.*)$'
-        onlyDirected = False
+        onlyDirected = True 
 
         name = 'seen'
         short_desc = 'seen username - When was user "username" last seen?'
@@ -115,7 +115,7 @@ class Seen(ChatCommandPlugin, PopulationPlugin, PresencePlugin):
     class NamesCommand(Command):
         """List all users in the channel."""
         regex = r'^(names?|users?|nicks?)\s?(?:list)?$'
-        onlyDirected = False
+        onlyDirected = True 
 
         name = 'names'
         short_desc = 'names - Get the list of users in channel.'
